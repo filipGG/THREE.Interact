@@ -189,6 +189,8 @@ export class InteractionManager {
 
     const pathUntilPropagationWasStopped: Intersection[] = [];
 
+    const overEvents: InteractiveEvent[] = [];
+
     for (const event of fullEventPath) {
       const eventId = createId(event);
 
@@ -205,7 +207,7 @@ export class InteractionManager {
           event.instanceId,
         );
 
-        event.currentObject.dispatchEvent(interactiveEvent);
+        overEvents.push(interactiveEvent);
 
         if (interactiveEvent.propagationStopped) {
           event.propagationStopped = true;
@@ -216,7 +218,12 @@ export class InteractionManager {
       }
     }
 
+    // We trigger "out" of the prev objects before we trigger "over" on the new ones
     this.processUnhoveredObjects(pathUntilPropagationWasStopped);
+
+    overEvents.forEach((event) => {
+      event.currentTarget.dispatchEvent(event);
+    });
   };
 
   private processUnhoveredObjects = (eventPath: Intersection[]) => {
@@ -309,6 +316,7 @@ export class InteractionManager {
     this._duplicates.clear();
 
     const result = Array.from(this._interactiveObjects)
+      .filter(isEffectivelyVisible)
       // Intersect objects
       .flatMap((obj) => this._raycaster.intersectObject(obj, true))
       // Sort by distance
@@ -352,4 +360,16 @@ function getPointerDelta(downEvent: PointerEvent | undefined, upEvent: PointerEv
   const distance = Math.hypot(deltaX, deltaY);
 
   return { deltaX, deltaY, distance };
+}
+
+function isEffectivelyVisible(object: THREE.Object3D) {
+  let current: THREE.Object3D | null = object;
+  while (current) {
+    if (!current.visible) {
+      return false;
+    }
+
+    current = current.parent;
+  }
+  return true;
 }
