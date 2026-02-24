@@ -169,7 +169,8 @@ export class InteractionManager {
   private handleDocumentPointerMove = (pointerEvent: PointerEvent) => {
     this.updateMousePosition(pointerEvent.clientX, pointerEvent.clientY);
 
-    const fullEventPath = this.getEventPath();
+    const isMouseOverElement = pointerEvent.target === this._element;
+    const fullEventPath = isMouseOverElement ? this.getEventPath() : [];
 
     const pathUntilPropagationWasStopped: Intersection[] = [];
 

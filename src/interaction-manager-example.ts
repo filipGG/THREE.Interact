@@ -23,7 +23,7 @@ export class InteractionManagerExample {
 
     this.configureRenderer();
 
-    this.setupComplexScenario();
+    this.setupSimpleScenario();
 
     this.update();
   }

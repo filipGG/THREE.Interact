@@ -22,10 +22,10 @@ describe('InteractionManager', () => {
       box.addEventListener('pointerover', (e) => triggeredEvents.push(e.type));
       box.addEventListener('pointerout', (e) => triggeredEvents.push(e.type));
 
-      element.dispatchEvent(mockEvent('pointermove', 0, 0));
-      element.dispatchEvent(mockEvent('pointermove', 512, 512));
-      element.dispatchEvent(mockEvent('pointermove', 505, 505));
-      element.dispatchEvent(mockEvent('pointermove', 0, 0));
+      element.dispatchEvent(mockEvent('pointermove', 0, 0, element));
+      element.dispatchEvent(mockEvent('pointermove', 512, 512, element));
+      element.dispatchEvent(mockEvent('pointermove', 505, 505, element));
+      element.dispatchEvent(mockEvent('pointermove', 0, 0, element));
 
       expect(triggeredEvents).toEqual(['pointerover', 'pointerout']);
     });
@@ -37,11 +37,11 @@ describe('InteractionManager', () => {
       const triggeredEvents: string[] = [];
       box.addEventListener('pointerdown', (e) => triggeredEvents.push(e.type));
 
-      element.dispatchEvent(mockEvent('pointerdown', 512, 512));
-      element.dispatchEvent(mockEvent('pointerdown', 512, 512));
+      element.dispatchEvent(mockEvent('pointerdown', 512, 512, element));
+      element.dispatchEvent(mockEvent('pointerdown', 512, 512, element));
       manager.remove(box);
-      element.dispatchEvent(mockEvent('pointerdown', 512, 512));
-      element.dispatchEvent(mockEvent('pointerdown', 512, 512));
+      element.dispatchEvent(mockEvent('pointerdown', 512, 512, element));
+      element.dispatchEvent(mockEvent('pointerdown', 512, 512, element));
 
       expect(triggeredEvents).toEqual(['pointerdown', 'pointerdown']);
     });
@@ -56,11 +56,28 @@ describe('InteractionManager', () => {
       box.addEventListener('pointerup', (e) => triggeredEvents.push(e.type));
       box.addEventListener('click', (e) => triggeredEvents.push(e.type));
 
-      element.dispatchEvent(mockEvent('pointermove', 512, 512));
-      element.dispatchEvent(mockEvent('pointerdown', 512, 512));
-      element.dispatchEvent(mockEvent('pointerup', 512, 512));
+      element.dispatchEvent(mockEvent('pointermove', 512, 512, element));
+      element.dispatchEvent(mockEvent('pointerdown', 512, 512, element));
+      element.dispatchEvent(mockEvent('pointerup', 512, 512, element));
 
       expect(triggeredEvents).toEqual(['pointerdown', 'pointerup', 'click']);
+    });
+
+    it('should trigger pointerout when leaving the canvas', () => {
+      const { box } = SHARED.simpleScenario();
+      manager.add(box);
+
+      const triggeredEvents: string[] = [];
+
+      box.addEventListener('pointerover', (e) => triggeredEvents.push(e.type));
+      box.addEventListener('pointerout', (e) => triggeredEvents.push(e.type));
+
+      // Start hovering the box
+      element.dispatchEvent(mockEvent('pointermove', 512, 512, element));
+      // Simulate that we leave the canvas and hover some absolute positioned element, which will change the target
+      element.dispatchEvent(mockEvent('pointermove', 512, 512, mockElement()));
+
+      expect(triggeredEvents).toEqual(['pointerover', 'pointerout']);
     });
   });
 
@@ -79,7 +96,7 @@ describe('InteractionManager', () => {
       childBox.addEventListener('pointerdown', (e) => triggeredEvents.push('child_down'));
       childBatched.addEventListener('pointerdown', (e) => triggeredEvents.push('batched_down'));
 
-      element.dispatchEvent(mockEvent('pointerdown', 592, 512));
+      element.dispatchEvent(mockEvent('pointerdown', 592, 512, element));
 
       expect(triggeredEvents).toEqual(['child_down', 'parent_down', 'scene_down']);
     });
@@ -102,7 +119,7 @@ describe('InteractionManager', () => {
         triggeredEvents.push('child_down');
       });
 
-      element.dispatchEvent(mockEvent('pointerdown', 592, 512));
+      element.dispatchEvent(mockEvent('pointerdown', 592, 512, element));
 
       expect(triggeredEvents).toEqual(['child_down', 'parent_down']);
     });
@@ -119,10 +136,10 @@ describe('InteractionManager', () => {
       scene.addEventListener('pointerover', (e) => triggeredEvents.push('scene_over'));
 
       // Move back and forth between parentBox and childBox
-      element.dispatchEvent(mockEvent('pointermove', 512, 512));
-      element.dispatchEvent(mockEvent('pointermove', 592, 512));
-      element.dispatchEvent(mockEvent('pointermove', 512, 512));
-      element.dispatchEvent(mockEvent('pointermove', 592, 512));
+      element.dispatchEvent(mockEvent('pointermove', 512, 512, element));
+      element.dispatchEvent(mockEvent('pointermove', 592, 512, element));
+      element.dispatchEvent(mockEvent('pointermove', 512, 512, element));
+      element.dispatchEvent(mockEvent('pointermove', 592, 512, element));
 
       expect(triggeredEvents).toEqual(['scene_over']);
     });
@@ -146,12 +163,12 @@ describe('InteractionManager', () => {
       );
 
       // Move back and forth between the two instances in the batched mesh
-      element.dispatchEvent(mockEvent('pointermove', 606, 827));
-      element.dispatchEvent(mockEvent('pointermove', 738, 827));
+      element.dispatchEvent(mockEvent('pointermove', 606, 827, element));
+      element.dispatchEvent(mockEvent('pointermove', 738, 827, element));
 
       // Move back and forth between the two instances in the instanced mesh
-      element.dispatchEvent(mockEvent('pointermove', 606, 215));
-      element.dispatchEvent(mockEvent('pointermove', 738, 215));
+      element.dispatchEvent(mockEvent('pointermove', 606, 215, element));
+      element.dispatchEvent(mockEvent('pointermove', 738, 215, element));
 
       expect(triggeredEvents).toEqual([
         'child_batched_over_0',
@@ -164,11 +181,12 @@ describe('InteractionManager', () => {
   });
 });
 
-function mockEvent(type: EventName, x: number, y: number): Event {
+function mockEvent(type: string, x: number, y: number, target: HTMLElement): Event {
   const event: Partial<PointerEvent> = {
     type,
     clientX: x,
     clientY: y,
+    target,
   };
 
   return event as Event;
