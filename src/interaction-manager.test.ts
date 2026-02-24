@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { EventName, InteractionManager } from './interaction-manager';
+import { InteractionManager, PointerDelta } from './interaction-manager';
 import { SHARED } from './shared';
 
 describe('InteractionManager', () => {
@@ -78,6 +78,24 @@ describe('InteractionManager', () => {
       element.dispatchEvent(mockEvent('pointermove', 512, 512, mockElement()));
 
       expect(triggeredEvents).toEqual(['pointerover', 'pointerout']);
+    });
+
+    it('should have event delta', () => {
+      const { box } = SHARED.simpleScenario();
+      manager.add(box);
+
+      let pointerDelta: PointerDelta | undefined;
+      box.addEventListener('click', (e) => {
+        pointerDelta = e.delta;
+      });
+
+      element.dispatchEvent(mockEvent('pointerdown', 512, 512, element));
+      element.dispatchEvent(mockEvent('pointerup', 518, 512, element));
+
+      expect(pointerDelta).toBeDefined();
+      expect(pointerDelta?.deltaX).toEqual(6);
+      expect(pointerDelta?.deltaY).toEqual(0);
+      expect(pointerDelta?.distance).toEqual(6);
     });
   });
 

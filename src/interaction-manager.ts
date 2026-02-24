@@ -8,11 +8,18 @@ export class InteractiveEvent {
     public readonly currentTarget: THREE.Object3D,
     public readonly currentTargetBatchId: number | undefined,
     public readonly currentTargetInstanceId: number | undefined,
+    public readonly delta?: PointerDelta,
   ) {}
 
   public stopPropagation() {
     this.propagationStopped = true;
   }
+}
+
+export interface PointerDelta {
+  deltaX: number;
+  deltaY: number;
+  distance: number;
 }
 
 interface Intersection extends THREE.Intersection {
@@ -44,13 +51,14 @@ export class InteractiveObject {
 
 export class InteractionManager {
   private _raycaster = new THREE.Raycaster();
-  private _mousePosition = new THREE.Vector2(-1, 1);
-
   private _interactiveObjects = new Set<THREE.Object3D>();
 
+  private _mousePosition = new THREE.Vector2(-1, 1);
   private _hovered = new Map<string, Intersection>();
   private _initialHits: Intersection[] = [];
   private _duplicates = new Set<string>();
+
+  private _pointerDownEvent?: PointerEvent;
 
   constructor(
     private readonly _element: HTMLElement,
@@ -86,11 +94,14 @@ export class InteractionManager {
 
     if (eventPath.length > 0) {
       for (const event of eventPath) {
+        const delta = getPointerDelta(this._pointerDownEvent, pointerEvent);
+
         const interactiveEvent = new InteractiveEvent(
           'pointerup',
           event.currentObject,
           event.batchId,
           event.instanceId,
+          delta,
         );
         event.currentObject.dispatchEvent(interactiveEvent);
 
@@ -105,16 +116,20 @@ export class InteractionManager {
             event.currentObject,
             event.batchId,
             event.instanceId,
+            delta,
           );
           event.currentObject.dispatchEvent(interactiveClickEvent);
         }
       }
     }
 
+    this._pointerDownEvent = undefined;
     this._initialHits = [];
   };
 
   private handlePointerDown = (pointerEvent: PointerEvent) => {
+    this._pointerDownEvent = pointerEvent;
+
     this.updateMousePosition(pointerEvent.clientX, pointerEvent.clientY);
 
     const eventPath = this.getEventPath();
@@ -325,4 +340,16 @@ function getDepth(obj: THREE.Object3D): number {
     current = current.parent;
   }
   return depth;
+}
+
+function getPointerDelta(downEvent: PointerEvent | undefined, upEvent: PointerEvent) {
+  if (!downEvent) {
+    return undefined;
+  }
+
+  const deltaX = Math.abs(downEvent.clientX - upEvent.clientX);
+  const deltaY = Math.abs(downEvent.clientY - upEvent.clientY);
+  const distance = Math.hypot(deltaX, deltaY);
+
+  return { deltaX, deltaY, distance };
 }

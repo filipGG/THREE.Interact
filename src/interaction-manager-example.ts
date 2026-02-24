@@ -45,8 +45,10 @@ export class InteractionManagerExample {
     box.addEventListener('pointerup', () => {
       box.material.color.set('green');
     });
-    box.addEventListener('click', () => {
-      box.material.color.set('pink');
+    box.addEventListener('click', (event) => {
+      if (event.delta && event.delta.distance < 4) {
+        box.material.color.set('pink');
+      }
     });
   }
 
